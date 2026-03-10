@@ -1,45 +1,90 @@
-from fastapi import FastAPI, Query, Path
-from enum import Enum
-import random, math
+from fastapi import FastAPI, HTTPException
+import random
+from pyd import (
+    UserCreate,
+    User,
+    ItemCreate,
+    Item,
+    UnfilteredUsers,
+    Filters,
+    Request,
+    Response,
+    UserUpdate,
+)
 
-app=FastAPI()
+app = FastAPI()
 
-@app.get("/about")
-def about():
-    return {"Full Name":"Shabalin Egor Konstantinovich", 
-    "GroupID":"T-333901-IST", 
-    "Course Number":"III", 
-    "University Name":"NTI UrFU", 
-    "GitHub Page":"https://github.com/nmadnorangen"}
 
-@app.get("/rnd")
-def rnd(a:int=Query(default=1, ge=1, le=100), b:int=Query(default=100, ge=1, le=100)):
-    if a > b:
-        return{"error":"start is greater than finish!"}
-    return {"number":random.randint(a, b)}
+@app.post("/users", response_model=User)
+def create_users(user: UserCreate):
+    new_user = User(
+        user_id=random.randint(0, 999),
+        username=user.username,
+        email=user.email,
+        full_name=user.full_name,
+        age=user.age,
+    )
+    return new_user
 
-@app.post("/t_square")
-def t_square(a:int=Query(ge=1), b:int=Query(ge=1), c:int=Query(ge=1)):
-    if (a+b<c or a+c<b or b+c<a):
-        return{"error":"triangle doesn't exist!"}
-    P=a+b+c
-    p=P/2
-    S=math.sqrt(p*(p-a)*(p-b)*(p-c))
-    
-    return{"perimeter":P, "square":S}
 
-class Temperatures(str, Enum):
-    celsius="celsius"
-    fahrenheit="fahrenheit"
+@app.post("/items", response_model=Item)
+def create_items(item: ItemCreate):
+    new_item = Item(
+        name=item.name,
+        description=item.description,
+        total_price=item.price + (item.price * item.tax / 100),
+        tags=item.tags,
+        in_stock=item.in_stock,
+        quantity=item.quantity,
+    )
+    return new_item
 
-@app.get("/convert/{from_unit}/{to_unit}/{value}")
-def convert(from_unit:Temperatures, to_unit:Temperatures, value:float):
-    if from_unit == to_unit:
-        result = value
-    elif from_unit == Temperatures.celsius and to_unit == Temperatures.fahrenheit:
-        result = (value * 1.8) + 32
-    elif from_unit == Temperatures.fahrenheit and to_unit == Temperatures.celsius:
-        result = (value - 32) / 1.8
-    else:
-        return{"error":"an error occured"}
-    return{"result":f"{result} {to_unit.value}", "value":f"{value} {from_unit.value}"}
+
+@app.post("/filter-users", response_model=Response)
+def filter_users(request: Request):
+    users = request.users
+    filters = request.filters
+
+    filtered = []
+    for user in users:
+        if filters.min_age is not None and user.age < filters.min_age:
+            continue
+        if filters.max_age is not None and user.age > filters.max_age:
+            continue
+        if filters.active_only is True and not user.active:
+            continue
+        filtered.append(user)
+
+    return Response(
+        total_input=len(users),
+        filtered_count=len(filtered),
+        filtered_users=filtered,
+        applied_filters=filters,
+    )
+
+
+def random_data():
+    return {
+        "username": f"user{random.randint(0, 10000)}",
+        "email": f"example{random.randint(0, 10000)}@email.com",
+        "full_name": f"FirstName{random.randint(0, 10000)} SecondName{random.randint(0, 10000)} LastName{random.randint(0, 10000)}",
+        "age": random.randint(18, 120),
+    }
+
+
+@app.put("/users/{user_id}", response_model=User)
+def update_users(update_user: UserUpdate):
+    data = random_data()
+
+    updated_user = User(
+        user_id=random.randint(0, 999),
+        username=data["username"],
+        email=update_user.email if update_user.email is not None else data["email"],
+        full_name=(
+            update_user.full_name
+            if update_user.full_name is not None
+            else data["full_name"]
+        ),
+        age=update_user.age if update_user.age is not None else data["age"],
+    )
+    return updated_user
