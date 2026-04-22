@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional
 from sqlmodel import Field, SQLModel, String, Column
 from pydantic import BaseModel
@@ -25,16 +26,16 @@ class UserCreate(BaseModel):
 class Task(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     title: str
-    priority: int = Field(foreign_key="priority.id")
-    deadline: Optional[str] = None
+    priority: int = Field(default=1, ge=1, le=3, foreign_key="priority.id")
+    deadline: Optional[datetime] = None
     description: Optional[str] = None
     owner_id: int = Field(foreign_key="user.id")
 
 
 class TaskCreate(BaseModel):
     title: str
-    priority: int
-    deadline: Optional[str] = None
+    priority: int = Field(default=1, ge=1, le=3)
+    deadline: Optional[datetime] = None
     description: Optional[str] = None
 
 
@@ -46,5 +47,5 @@ class Priority(SQLModel, table=True):
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
     priority: Optional[int] = None
-    deadline: Optional[str] = None
+    deadline: Optional[datetime] = None
     description: Optional[str] = None
