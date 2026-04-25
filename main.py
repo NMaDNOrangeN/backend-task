@@ -1,13 +1,24 @@
 from fastapi import FastAPI, HTTPException, Depends, Query
-from typing import Annotated, Optional
+from typing_extensions import Annotated, Optional
 from sqlmodel import select
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 import models as m
+from enum import Enum
 import db
 import re
 
 app = FastAPI()
 security = HTTPBasic(auto_error=False)
+
+
+class PriorityEnum(str, Enum):
+    Low = "Low"
+    Medium = "Medium"
+    High = "High"
+
+    @property
+    def id(self) -> int:
+        return {"Low": 1, "Medium": 2, "High": 3}[self.value]
 
 
 def check_auth(
@@ -59,7 +70,7 @@ def create_task(
 ) -> m.TaskCreate:
     new_task = m.Task(
         title=task.title,
-        priority=task.priority,
+        priority_id=task.priority_id,
         deadline=task.deadline,
         description=task.description,
         owner_id=session.exec(
@@ -130,8 +141,8 @@ def get_tasks(
     credentials: Annotated[HTTPBasicCredentials, Depends(check_auth)],
     count: Optional[int] = 5,
     page: Optional[int] = 1,
-    priority: Optional[int] = Query(
-        None, description="Filter tasks by priority (1-3)", ge=1, le=3
+    priority: Optional[PriorityEnum] = Query(
+        None, description="Filter by priority (Low, Medium, High)"
     ),
     sort_by_deadline: bool = Query(False, description="Sort by deadline (ascending)"),
 ):
@@ -143,7 +154,7 @@ def get_tasks(
 
     query = select(m.Task).where(m.Task.owner_id == user_id)
     if priority is not None:
-        query = query.where(m.Task.priority == priority)
+        query = query.where(m.Task.priority_id == priority.id)
 
     tasks = session.exec(query).all()
 
