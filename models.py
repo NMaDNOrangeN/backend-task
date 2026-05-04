@@ -15,7 +15,8 @@ class User(SQLModel, table=True):
             nullable=False,
         )
     )
-    password: str = Field(regex=r"^(?=.*[a-zA-Z])(?=.*\d).{8,}$")
+    hashed_password: str
+    is_admin: bool = Field(default=False)
 
     tasks: list["Task"] = Relationship(back_populates="user")
 
@@ -23,6 +24,12 @@ class User(SQLModel, table=True):
 class UserCreate(BaseModel):
     username: str
     password: str
+
+
+class UserRead(BaseModel):
+    id: int
+    username: str
+    is_admin: bool
 
 
 class Priority(SQLModel, table=True):
