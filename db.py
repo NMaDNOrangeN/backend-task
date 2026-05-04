@@ -1,12 +1,14 @@
 from fastapi import Depends
 from typing_extensions import Annotated
 from sqlmodel import Session, SQLModel, create_engine
+from dotenv import load_dotenv
+import os
 
-sqlite_file_name = "database.db"
-sqlite_url = f"sqlite:///{sqlite_file_name}"
+load_dotenv()
 
-connect_args = {"check_same_thread": False}
-engine = create_engine(sqlite_url, connect_args=connect_args)
+sqlite_url = os.getenv("DATABASE_URL", "sqlite:///database.db")
+
+engine = create_engine(sqlite_url, connect_args={"check_same_thread": False})
 
 
 def create_db_and_tables():
